@@ -1,18 +1,15 @@
 package model
 
 type Config struct {
-	Id      string            `json:"id"`
-	Name    string            `json: "name"`
-	Version string            `json: "version"`
-	Params  map[string]string `json: "params"`
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	Version    string            `json:"version"`
+	Parameters map[string]string `json:"parameters"`
 }
 
-// todo: dodati metode
-
 type ConfigRepository interface {
-	// todo: dodati metode
-	Add(config Config)
-	Get(name string, version int) (Config, error)
+	Add(config Config) error
+	Get(name string, version string) (Config, error)
 }
 
 type ConfigurationGroup struct {
