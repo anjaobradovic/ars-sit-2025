@@ -6,6 +6,7 @@ import (
 
 	"github.com/anjaobradovic/ars-sit-2025/model"
 	"github.com/anjaobradovic/ars-sit-2025/services"
+	"github.com/gorilla/mux"
 )
 
 type ConfigHandler struct {
@@ -31,4 +32,29 @@ func (h *ConfigHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(config)
+}
+
+func (h *ConfigHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	config, err := h.service.Get(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(config)
+}
+
+func (h *ConfigHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	if err := h.service.Delete(id); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

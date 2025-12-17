@@ -21,7 +21,10 @@ func main() {
 	handler := handlers.NewConfigHandler(service)
 
 	r := mux.NewRouter()
+
 	r.HandleFunc("/configs", handler.CreateConfig).Methods("POST")
+	r.HandleFunc("/configs/{id}", handler.GetConfig).Methods("GET")
+	r.HandleFunc("/configs/{id}", handler.DeleteConfig).Methods("DELETE")
 
 	log.Println("Config service running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", r))

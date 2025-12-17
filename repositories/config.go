@@ -15,6 +15,7 @@ type ConfigRepository struct {
 
 //kv -  key value
 
+// add new config
 func NewConfigRepository(consulAddr string) (*ConfigRepository, error) {
 	cfg := api.DefaultConfig()
 	cfg.Address = consulAddr
@@ -52,4 +53,33 @@ func (r *ConfigRepository) Save(config model.Config) error {
 	}, nil)
 
 	return err
+}
+
+// found config by id
+func (r *ConfigRepository) GetByID(id string) (*model.Config, error) {
+	key := fmt.Sprintf("configs/%s", id)
+	pair, _, err := r.kv.Get(key, nil)
+	if err != nil {
+		return nil, err
+	}
+	if pair == nil {
+		return nil, errors.New("config not found")
+	}
+
+	var config model.Config
+	if err := json.Unmarshal(pair.Value, &config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
+// delete config by id
+func (r *ConfigRepository) DeleteByID(id string) error {
+	key := fmt.Sprintf("configs/%s", id)
+	_, err := r.kv.Delete(key, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }

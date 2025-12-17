@@ -11,6 +11,7 @@ type ConfigService struct {
 	repo *repositories.ConfigRepository
 }
 
+// add
 func NewConfigService(repo *repositories.ConfigRepository) *ConfigService {
 	return &ConfigService{repo: repo}
 }
@@ -27,4 +28,20 @@ func (s *ConfigService) Create(config model.Config) error {
 	}
 
 	return s.repo.Save(config)
+}
+
+// found
+func (s *ConfigService) Get(id string) (*model.Config, error) {
+	if id == "" {
+		return nil, errors.New("id is required")
+	}
+	return s.repo.GetByID(id)
+}
+
+// delete
+func (s *ConfigService) Delete(id string) error {
+	if id == "" {
+		return errors.New("id is required")
+	}
+	return s.repo.DeleteByID(id)
 }
