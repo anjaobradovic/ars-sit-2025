@@ -7,5 +7,7 @@ import (
 )
 
 func RegisterRoutes() {
-	http.HandleFunc("/configs", handlers.CreateConfigHandler)
+
+	http.HandleFunc("/config", handlers.Config)
+
 }
