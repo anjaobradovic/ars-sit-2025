@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -20,12 +25,39 @@ func main() {
 	service := services.NewConfigService(repo)
 	handler := handlers.NewConfigHandler(service)
 
+	//routers
 	r := mux.NewRouter()
-
 	r.HandleFunc("/configs", handler.CreateConfig).Methods("POST")
 	r.HandleFunc("/configs/{id}", handler.GetConfig).Methods("GET")
 	r.HandleFunc("/configs/{id}", handler.DeleteConfig).Methods("DELETE")
 
-	log.Println("Config service running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	//server
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: r,
+	}
+
+	// Channel - OS signals
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	// server start
+	go func() {
+		log.Println("Config service running on :8080")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	<-quit
+	log.Println("Shutting down Config service...")
+
+	// Graceful shutdown with timer
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	log.Println("Server stopped gracefully")
 }
