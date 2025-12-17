@@ -6,25 +6,26 @@ import (
 
 	"github.com/anjaobradovic/ars-sit-2025/model"
 	"github.com/anjaobradovic/ars-sit-2025/services"
-	"github.com/google/uuid"
 )
 
-func CreateConfigHandler(w http.ResponseWriter, r *http.Request) { // ✅ prvo slovo veliko
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+type ConfigHandler struct {
+	service *services.ConfigService
+}
 
+func NewConfigHandler(service *services.ConfigService) *ConfigHandler {
+	return &ConfigHandler{service: service}
+}
+
+func (h *ConfigHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	var config model.Config
+
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid JSON body", http.StatusBadRequest)
 		return
 	}
 
-	config.ID = uuid.NewString()
-
-	if err := services.CreateConfig(config); err != nil {
-		http.Error(w, err.Error(), http.StatusConflict)
+	if err := h.service.Create(config); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

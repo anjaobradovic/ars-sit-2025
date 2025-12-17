@@ -10,8 +10,8 @@ RUN go mod download
 #preuzima sve zavisnosti naseg servisa
 COPY ./ ./
 
-RUN go build -o config-service
+RUN go build -o app
 
 EXPOSE 8080
 
-CMD ["./config-service"]
+CMD ["./app"]
