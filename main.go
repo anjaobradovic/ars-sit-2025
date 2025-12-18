@@ -25,11 +25,27 @@ func main() {
 	service := services.NewConfigService(repo)
 	handler := handlers.NewConfigHandler(service)
 
+	// --- Configuration Groups ---
+	groupRepo, err := repositories.NewGroupRepository("consul:8500")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	groupService := services.NewGroupService(groupRepo)
+	groupHandler := handlers.NewGroupHandler(groupService)
+
 	//routers
 	r := mux.NewRouter()
 	r.HandleFunc("/configs", handler.CreateConfig).Methods("POST")
 	r.HandleFunc("/configs/{id}", handler.GetConfig).Methods("GET")
 	r.HandleFunc("/configs/{id}", handler.DeleteConfig).Methods("DELETE")
+
+	// Configuration Group endpointi
+	r.HandleFunc("/groups", groupHandler.CreateGroup).Methods("POST")
+	r.HandleFunc("/groups/{id}", groupHandler.GetGroup).Methods("GET")
+	r.HandleFunc("/groups/{id}", groupHandler.DeleteGroup).Methods("DELETE")
+	r.HandleFunc("/groups/{id}/add-config", groupHandler.AddConfig).Methods("POST")
+	r.HandleFunc("/groups/{id}/remove-config", groupHandler.RemoveConfig).Methods("POST")
 
 	//server
 	srv := &http.Server{
