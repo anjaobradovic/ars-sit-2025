@@ -84,16 +84,6 @@ func (r *ConfigRepository) DeleteByID(id string) error {
 	return nil
 }
 
-type ConfigRepository struct {
-	data map[string]model.Config
-}
-
-func NewConfigRepository() *ConfigRepository {
-	return &ConfigRepository{
-		data: make(map[string]model.Config),
-	}
-}
-
 func (r *ConfigRepository) Add(cfg model.Config) error {
 
 	// kljuc = name:version
