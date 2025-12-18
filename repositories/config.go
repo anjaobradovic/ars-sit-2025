@@ -1,26 +1,86 @@
 package repositories
 
 import (
+	"encoding/json"
 	"errors"
-	"sync"
+	"fmt"
 
 	"github.com/anjaobradovic/ars-sit-2025/model"
+	"github.com/hashicorp/consul/api"
 )
 
-var (
-	configs = make(map[string]model.Config)
-	mu      sync.Mutex
-)
+type ConfigRepository struct {
+	kv *api.KV
+}
 
-func Save(config model.Config) error {
-	mu.Lock()
-	defer mu.Unlock()
+//kv -  key value
 
-	if _, exists := configs[config.ID]; exists {
+// add new config
+func NewConfigRepository(consulAddr string) (*ConfigRepository, error) {
+	cfg := api.DefaultConfig()
+	cfg.Address = consulAddr
+
+	client, err := api.NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ConfigRepository{
+		kv: client.KV(),
+	}, nil
+}
+
+func (r *ConfigRepository) Save(config model.Config) error {
+	key := fmt.Sprintf("configs/%s", config.ID)
+
+	// check does it already exist
+	existing, _, err := r.kv.Get(key, nil)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
 		return errors.New("config already exists")
 	}
 
-	configs[config.ID] = config
+	data, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.kv.Put(&api.KVPair{
+		Key:   key,
+		Value: data,
+	}, nil)
+
+	return err
+}
+
+// found config by id
+func (r *ConfigRepository) GetByID(id string) (*model.Config, error) {
+	key := fmt.Sprintf("configs/%s", id)
+	pair, _, err := r.kv.Get(key, nil)
+	if err != nil {
+		return nil, err
+	}
+	if pair == nil {
+		return nil, errors.New("config not found")
+	}
+
+	var config model.Config
+	if err := json.Unmarshal(pair.Value, &config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
+// delete config by id
+func (r *ConfigRepository) DeleteByID(id string) error {
+	key := fmt.Sprintf("configs/%s", id)
+	_, err := r.kv.Delete(key, nil)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
