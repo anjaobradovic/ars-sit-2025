@@ -25,9 +25,8 @@ func NewConfigRepository(consulAddr string) (*ConfigRepository, error) {
 	return &ConfigRepository{kv: client.KV()}, nil
 }
 
-// Save a new config (immutable, idempotent)
 func (r *ConfigRepository) Save(config model.Config) error {
-	key := fmt.Sprintf("configs/%s/%s", config.ID, config.Version)
+	key := fmt.Sprintf("configs/%s/%s", config.Name, config.Version)
 
 	existing, _, err := r.kv.Get(key, nil)
 	if err != nil {
@@ -50,9 +49,9 @@ func (r *ConfigRepository) Save(config model.Config) error {
 	return err
 }
 
-// Get config by ID + version
-func (r *ConfigRepository) GetByIDAndVersion(id, version string) (*model.Config, error) {
-	key := fmt.Sprintf("configs/%s/%s", id, version)
+func (r *ConfigRepository) GetByNameAndVersion(name, version string) (*model.Config, error) {
+	key := fmt.Sprintf("configs/%s/%s", name, version)
+
 	pair, _, err := r.kv.Get(key, nil)
 	if err != nil {
 		return nil, err
@@ -69,9 +68,8 @@ func (r *ConfigRepository) GetByIDAndVersion(id, version string) (*model.Config,
 	return &config, nil
 }
 
-// Delete config by ID + version
-func (r *ConfigRepository) DeleteByIDAndVersion(id, version string) error {
-	key := fmt.Sprintf("configs/%s/%s", id, version)
+func (r *ConfigRepository) DeleteByNameAndVersion(name, version string) error {
+	key := fmt.Sprintf("configs/%s/%s", name, version)
 	_, err := r.kv.Delete(key, nil)
 	return err
 }

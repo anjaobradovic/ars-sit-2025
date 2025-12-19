@@ -32,18 +32,17 @@ func (s *ConfigService) Create(config *model.Config) error {
 	return s.repo.Save(*config)
 }
 
-// Get by ID + version
-func (s *ConfigService) Get(id, version string) (*model.Config, error) {
-	if id == "" || version == "" {
-		return nil, errors.New("id and version are required")
+func (s *ConfigService) Get(name, version string) (*model.Config, error) {
+	if name == "" || version == "" {
+		return nil, errors.New("name and version are required")
 	}
-	return s.repo.GetByIDAndVersion(id, version)
+	return s.repo.GetByNameAndVersion(name, version)
 }
 
 // Delete by ID + version
-func (s *ConfigService) Delete(id, version string) error {
-	if id == "" || version == "" {
-		return errors.New("id and version are required")
+func (s *ConfigService) Delete(name, version string) error {
+	if name == "" || version == "" {
+		return errors.New("name and version are required")
 	}
-	return s.repo.DeleteByIDAndVersion(id, version)
+	return s.repo.DeleteByNameAndVersion(name, version)
 }
