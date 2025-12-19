@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/anjaobradovic/ars-sit-2025/handlers"
+	"github.com/anjaobradovic/ars-sit-2025/middleware"
 	"github.com/anjaobradovic/ars-sit-2025/repositories"
 	"github.com/anjaobradovic/ars-sit-2025/services"
 )
@@ -35,6 +36,7 @@ func main() {
 
 	// --- Router ---
 	r := mux.NewRouter()
+	r.Use(middleware.RateLimit)
 
 	// Config endpoints
 	r.HandleFunc("/configs", configHandler.CreateConfig).Methods("POST")
