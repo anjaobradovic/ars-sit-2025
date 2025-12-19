@@ -17,47 +17,48 @@ import (
 )
 
 func main() {
-	repo, err := repositories.NewConfigRepository("consul:8500")
+	// --- Config repository + service ---
+	configRepo, err := repositories.NewConfigRepository("consul:8500")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	service := services.NewConfigService(repo)
-	handler := handlers.NewConfigHandler(service)
+	configService := services.NewConfigService(configRepo)
+	configHandler := handlers.NewConfigHandler(configService)
 
 	// --- Configuration Groups ---
 	groupRepo, err := repositories.NewGroupRepository("consul:8500")
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	groupService := services.NewGroupService(groupRepo)
 	groupHandler := handlers.NewGroupHandler(groupService)
 
-	//routers
+	// --- Router ---
 	r := mux.NewRouter()
-	r.HandleFunc("/configs", handler.CreateConfig).Methods("POST")
-	r.HandleFunc("/configs/{id}", handler.GetConfig).Methods("GET")
-	r.HandleFunc("/configs/{id}", handler.DeleteConfig).Methods("DELETE")
 
-	// Configuration Group endpointi
+	// Config endpoints
+	r.HandleFunc("/configs", configHandler.CreateConfig).Methods("POST")
+	r.HandleFunc("/configs/{id}/versions/{version}", configHandler.GetConfigByVersion).Methods("GET")
+	r.HandleFunc("/configs/{id}/versions/{version}", configHandler.DeleteConfigByVersion).Methods("DELETE")
+
+	// Configuration Group endpoints
 	r.HandleFunc("/groups", groupHandler.CreateGroup).Methods("POST")
 	r.HandleFunc("/groups/{id}", groupHandler.GetGroup).Methods("GET")
 	r.HandleFunc("/groups/{id}", groupHandler.DeleteGroup).Methods("DELETE")
 	r.HandleFunc("/groups/{id}/add-config", groupHandler.AddConfig).Methods("POST")
 	r.HandleFunc("/groups/{id}/remove-config", groupHandler.RemoveConfig).Methods("POST")
 
-	//server
+	// --- HTTP server ---
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: r,
 	}
 
-	// Channel - OS signals
+	// OS signal channel
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
-	// server start
+	// Start server
 	go func() {
 		log.Println("Config service running on :8080")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -65,10 +66,11 @@ func main() {
 		}
 	}()
 
+	// Wait for shutdown signal
 	<-quit
 	log.Println("Shutting down Config service...")
 
-	// Graceful shutdown with timer
+	// Graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {

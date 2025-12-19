@@ -1,15 +1,16 @@
 package model
 
 type Config struct {
-	ID         string            `json:"id"`
+	ID         string            `json:"id"` // UUID
 	Name       string            `json:"name"`
-	Version    string            `json:"version"`
+	Version    string            `json:"version"` // npr. "v1", "v2"
 	Parameters map[string]string `json:"parameters"`
 }
 
 type ConfigRepository interface {
-	Add(config Config) error
-	Get(name string, version string) (Config, error)
+	Add(config Config) error                                     // dodaje novu verziju
+	GetByIDAndVersion(id string, version string) (Config, error) // dohvat po UUID + verzija
+	DeleteByIDAndVersion(id string, version string) error        // brisanje po UUID + verzija
 }
 
 type ConfigurationGroup struct {
