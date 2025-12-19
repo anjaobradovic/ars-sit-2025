@@ -40,8 +40,8 @@ func main() {
 
 	// Config endpoints
 	r.HandleFunc("/configs", configHandler.CreateConfig).Methods("POST")
-	r.HandleFunc("/configs/{id}/versions/{version}", configHandler.GetConfigByVersion).Methods("GET")
-	r.HandleFunc("/configs/{id}/versions/{version}", configHandler.DeleteConfigByVersion).Methods("DELETE")
+	r.HandleFunc("/configs/{name}/versions/{version}", configHandler.GetConfigByVersion).Methods("GET")
+	r.HandleFunc("/configs/{name}/versions/{version}", configHandler.DeleteConfigByVersion).Methods("DELETE")
 
 	// Configuration Groups
 	r.HandleFunc("/groups", groupHandler.CreateGroup).Methods("POST")

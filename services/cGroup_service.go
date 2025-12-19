@@ -27,7 +27,19 @@ func (s *GroupService) Create(group *model.ConfigurationGroup) error {
 		return errors.New("version is required")
 	}
 
-	group.Configurations = []*model.LabeledConfiguration{}
+	// Ovo briše konfiguracije, što je problem:
+	// group.Configurations = []*model.LabeledConfiguration{}
+
+	// Umesto toga, možeš proći kroz svaku konfiguraciju i dodati UUID ako nedostaje:
+	for _, cfg := range group.Configurations {
+		if cfg.Id == "" {
+			cfg.Id = uuid.New().String()
+		}
+		if cfg.Configuration != nil && cfg.Configuration.ID == "" {
+			cfg.Configuration.ID = uuid.New().String()
+		}
+	}
+
 	return s.repo.Save(*group)
 }
 
