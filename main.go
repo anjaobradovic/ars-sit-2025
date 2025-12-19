@@ -41,12 +41,12 @@ func main() {
 	r.HandleFunc("/configs/{id}/versions/{version}", configHandler.GetConfigByVersion).Methods("GET")
 	r.HandleFunc("/configs/{id}/versions/{version}", configHandler.DeleteConfigByVersion).Methods("DELETE")
 
-	// Configuration Group endpoints
+	// Configuration Groups
 	r.HandleFunc("/groups", groupHandler.CreateGroup).Methods("POST")
-	r.HandleFunc("/groups/{id}", groupHandler.GetGroup).Methods("GET")
-	r.HandleFunc("/groups/{id}", groupHandler.DeleteGroup).Methods("DELETE")
-	r.HandleFunc("/groups/{id}/add-config", groupHandler.AddConfig).Methods("POST")
-	r.HandleFunc("/groups/{id}/remove-config", groupHandler.RemoveConfig).Methods("POST")
+	r.HandleFunc("/groups/{name}/versions/{version}", groupHandler.GetGroup).Methods("GET")
+	r.HandleFunc("/groups/{name}/versions/{version}", groupHandler.DeleteGroup).Methods("DELETE")
+	r.HandleFunc("/groups/{name}/versions/{version}/add-config", groupHandler.AddConfig).Methods("POST")
+	r.HandleFunc("/groups/{name}/versions/{version}/remove-config", groupHandler.RemoveConfig).Methods("POST")
 
 	// --- HTTP server ---
 	srv := &http.Server{

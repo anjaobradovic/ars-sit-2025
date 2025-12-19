@@ -16,22 +16,28 @@ type GroupRepository struct {
 func NewGroupRepository(consulAddr string) (*GroupRepository, error) {
 	cfg := api.DefaultConfig()
 	cfg.Address = consulAddr
+
 	client, err := api.NewClient(cfg)
 	if err != nil {
 		return nil, err
 	}
+
 	return &GroupRepository{kv: client.KV()}, nil
 }
 
+func groupKey(name, version string) string {
+	return fmt.Sprintf("groups/%s/%s", name, version)
+}
+
 func (r *GroupRepository) Save(group model.ConfigurationGroup) error {
-	key := fmt.Sprintf("groups/%s", group.Id)
+	key := groupKey(group.Name, group.Version)
 
 	existing, _, err := r.kv.Get(key, nil)
 	if err != nil {
 		return err
 	}
 	if existing != nil {
-		return errors.New("group already exists")
+		return errors.New("group with this name and version already exists")
 	}
 
 	data, err := json.Marshal(group)
@@ -43,11 +49,13 @@ func (r *GroupRepository) Save(group model.ConfigurationGroup) error {
 		Key:   key,
 		Value: data,
 	}, nil)
+
 	return err
 }
 
-func (r *GroupRepository) GetByID(id string) (*model.ConfigurationGroup, error) {
-	key := fmt.Sprintf("groups/%s", id)
+func (r *GroupRepository) GetByNameAndVersion(name, version string) (*model.ConfigurationGroup, error) {
+	key := groupKey(name, version)
+
 	pair, _, err := r.kv.Get(key, nil)
 	if err != nil {
 		return nil, err
@@ -60,25 +68,18 @@ func (r *GroupRepository) GetByID(id string) (*model.ConfigurationGroup, error) 
 	if err := json.Unmarshal(pair.Value, &group); err != nil {
 		return nil, err
 	}
+
 	return &group, nil
 }
 
-func (r *GroupRepository) DeleteByID(id string) error {
-	key := fmt.Sprintf("groups/%s", id)
+func (r *GroupRepository) DeleteByNameAndVersion(name, version string) error {
+	key := groupKey(name, version)
 	_, err := r.kv.Delete(key, nil)
 	return err
 }
 
 func (r *GroupRepository) Update(group model.ConfigurationGroup) error {
-	key := fmt.Sprintf("groups/%s", group.Id)
-
-	existing, _, err := r.kv.Get(key, nil)
-	if err != nil {
-		return err
-	}
-	if existing == nil {
-		return errors.New("group does not exist")
-	}
+	key := groupKey(group.Name, group.Version)
 
 	data, err := json.Marshal(group)
 	if err != nil {
@@ -89,5 +90,6 @@ func (r *GroupRepository) Update(group model.ConfigurationGroup) error {
 		Key:   key,
 		Value: data,
 	}, nil)
+
 	return err
 }
