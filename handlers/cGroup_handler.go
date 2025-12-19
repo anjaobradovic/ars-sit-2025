@@ -92,3 +92,39 @@ func (h *GroupHandler) RemoveConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
+
+func (h *GroupHandler) GetConfigsByLabels(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	group, err := h.service.Get(vars["name"], vars["version"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	queryLabels := r.URL.Query()
+
+	result := []*model.LabeledConfiguration{}
+
+	for _, cfg := range group.Configurations {
+		match := true
+
+		for key, values := range queryLabels {
+			if cfg.Labels == nil {
+				match = false
+				break
+			}
+
+			if cfg.Labels[key] != values[0] {
+				match = false
+				break
+			}
+		}
+
+		if match {
+			result = append(result, cfg)
+		}
+	}
+
+	json.NewEncoder(w).Encode(result)
+}
