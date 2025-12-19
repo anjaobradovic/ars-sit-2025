@@ -25,3 +25,16 @@ type LabeledConfiguration struct {
 	Configuration *Config           `json:"configuration"`
 	Labels        map[string]string `json:"labels"`
 }
+
+type IdempotencyStatus string
+
+const (
+	StatusInProgress IdempotencyStatus = "in_progress"
+	StatusCompleted  IdempotencyStatus = "completed"
+)
+
+type IdempotencyRecord struct {
+	Status     IdempotencyStatus `json:"status"`
+	StatusCode int               `json:"statusCode"`
+	Body       string            `json:"body"`
+}

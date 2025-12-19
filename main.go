@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/hashicorp/consul/api"
 
 	"github.com/anjaobradovic/ars-sit-2025/handlers"
 	"github.com/anjaobradovic/ars-sit-2025/middleware"
@@ -34,16 +35,25 @@ func main() {
 	groupService := services.NewGroupService(groupRepo)
 	groupHandler := handlers.NewGroupHandler(groupService)
 
+	config := api.DefaultConfig()
+	config.Address = "host.docker.internal:8500"
+	consulClient, err := api.NewClient(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// --- Router ---
 	r := mux.NewRouter()
+
+	// --- Middleware ---
 	r.Use(middleware.RateLimit)
 
-	// Config endpoints
-	r.HandleFunc("/configs", configHandler.CreateConfig).Methods("POST")
+	// Config endpoints sa IdempotencyMiddleware
+	r.Handle("/configs", middleware.IdempotencyMiddleware(consulClient)(http.HandlerFunc(configHandler.CreateConfig))).Methods("POST")
 	r.HandleFunc("/configs/{name}/versions/{version}", configHandler.GetConfigByVersion).Methods("GET")
 	r.HandleFunc("/configs/{name}/versions/{version}", configHandler.DeleteConfigByVersion).Methods("DELETE")
 
-	// Configuration Groups
+	// Configuration Groups endpoints
 	r.HandleFunc("/groups", groupHandler.CreateGroup).Methods("POST")
 	r.HandleFunc("/groups/{name}/versions/{version}", groupHandler.GetGroup).Methods("GET")
 	r.HandleFunc("/groups/{name}/versions/{version}", groupHandler.DeleteGroup).Methods("DELETE")
