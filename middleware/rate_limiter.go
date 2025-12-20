@@ -26,9 +26,9 @@ func RateLimit(next http.Handler) http.Handler {
 
 		mu.Lock()
 		last, ok := lastSeen[ip]
-		if ok && now.Sub(last) < 5*time.Second {
+		if ok && now.Sub(last) < 2*time.Second {
 			mu.Unlock()
-			http.Error(w, "rate limit: 1 request every 5sec", http.StatusTooManyRequests)
+			http.Error(w, "rate limit: 1 request every 2sec", http.StatusTooManyRequests)
 			return
 		}
 		lastSeen[ip] = now

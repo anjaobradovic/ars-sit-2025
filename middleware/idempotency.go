@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,7 +36,6 @@ func IdempotencyMiddleware(consulClient *api.Client) func(http.Handler) http.Han
 			}
 
 			if pair != nil {
-				// Ključ postoji, proveri stanje
 				var record model.IdempotencyRecord
 				if err := json.Unmarshal(pair.Value, &record); err != nil {
 					http.Error(w, "Failed to parse stored record", http.StatusInternalServerError)
@@ -57,7 +57,15 @@ func IdempotencyMiddleware(consulClient *api.Client) func(http.Handler) http.Han
 				}
 			}
 
-			// Ključ ne postoji, kreiraj placeholder
+			// Pročitaj body i resetuj r.Body da se može ponovo čitati
+			bodyBytes, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
+			// Kreiraj placeholder za zahtev u toku
 			placeholder := &model.IdempotencyRecord{Status: model.StatusInProgress}
 			placeholderJSON, _ := json.Marshal(placeholder)
 			p := &api.KVPair{Key: keyPath, Value: placeholderJSON, CreateIndex: 0}
