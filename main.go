@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/consul/api"
 
 	"github.com/anjaobradovic/ars-sit-2025/handlers"
+	"github.com/anjaobradovic/ars-sit-2025/metrics"
 	"github.com/anjaobradovic/ars-sit-2025/middleware"
 	"github.com/anjaobradovic/ars-sit-2025/repositories"
 	"github.com/anjaobradovic/ars-sit-2025/services"
@@ -46,7 +47,10 @@ func main() {
 	r := mux.NewRouter()
 
 	// --- Middleware ---
-	r.Use(middleware.RateLimit)
+	r.Use(middleware.MetricsMiddleware)
+	//r.Use(middleware.RateLimit)
+
+	r.Handle("/metrics", metrics.MetricsHandler())
 
 	// Config endpoints sa IdempotencyMiddleware
 	r.Handle("/configs", middleware.IdempotencyMiddleware(consulClient)(http.HandlerFunc(configHandler.CreateConfig))).Methods("POST")

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/anjaobradovic/ars-sit-2025/model"
@@ -65,6 +66,10 @@ func (h *GroupHandler) AddConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("Handler: AddConfig called")
+	log.Printf("Group: %s %s\n", vars["name"], vars["version"])
+	log.Printf("Config payload: %+v\n", cfg)
+
 	if err := h.service.AddConfig(vars["name"], vars["version"], cfg); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -103,24 +108,16 @@ func (h *GroupHandler) GetConfigsByLabels(w http.ResponseWriter, r *http.Request
 	}
 
 	queryLabels := r.URL.Query()
-
 	result := []*model.LabeledConfiguration{}
 
 	for _, cfg := range group.Configurations {
 		match := true
-
 		for key, values := range queryLabels {
-			if cfg.Labels == nil {
-				match = false
-				break
-			}
-
-			if cfg.Labels[key] != values[0] {
+			if cfg.Labels == nil || cfg.Labels[key] != values[0] {
 				match = false
 				break
 			}
 		}
-
 		if match {
 			result = append(result, cfg)
 		}

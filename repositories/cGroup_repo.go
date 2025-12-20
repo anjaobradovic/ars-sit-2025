@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/anjaobradovic/ars-sit-2025/model"
 	"github.com/hashicorp/consul/api"
@@ -45,6 +46,7 @@ func (r *GroupRepository) Save(group model.ConfigurationGroup) error {
 		return err
 	}
 
+	log.Printf("Repository: saving new group %s %s", group.Name, group.Version)
 	_, err = r.kv.Put(&api.KVPair{
 		Key:   key,
 		Value: data,
@@ -85,6 +87,8 @@ func (r *GroupRepository) Update(group model.ConfigurationGroup) error {
 	if err != nil {
 		return err
 	}
+
+	log.Printf("Repository: updating group %s %s with configs: %+v", group.Name, group.Version, group.Configurations)
 
 	_, err = r.kv.Put(&api.KVPair{
 		Key:   key,

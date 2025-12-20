@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"log"
 
 	"github.com/anjaobradovic/ars-sit-2025/model"
 	"github.com/anjaobradovic/ars-sit-2025/repositories"
@@ -17,9 +18,6 @@ func NewGroupService(repo *repositories.GroupRepository) *GroupService {
 }
 
 func (s *GroupService) Create(group *model.ConfigurationGroup) error {
-	if group.Id == "" {
-		group.Id = uuid.New().String()
-	}
 	if group.Name == "" {
 		return errors.New("name is required")
 	}
@@ -27,17 +25,12 @@ func (s *GroupService) Create(group *model.ConfigurationGroup) error {
 		return errors.New("version is required")
 	}
 
-	// Ovo briše konfiguracije, što je problem:
-	// group.Configurations = []*model.LabeledConfiguration{}
+	if group.Id == "" {
+		group.Id = uuid.New().String()
+	}
 
-	// Umesto toga, možeš proći kroz svaku konfiguraciju i dodati UUID ako nedostaje:
-	for _, cfg := range group.Configurations {
-		if cfg.Id == "" {
-			cfg.Id = uuid.New().String()
-		}
-		if cfg.Configuration != nil && cfg.Configuration.ID == "" {
-			cfg.Configuration.ID = uuid.New().String()
-		}
+	if group.Configurations == nil {
+		group.Configurations = []*model.LabeledConfiguration{}
 	}
 
 	return s.repo.Save(*group)
@@ -63,13 +56,30 @@ func (s *GroupService) AddConfig(name, version string, cfg model.LabeledConfigur
 		return err
 	}
 
+	if cfg.Configuration == nil {
+		return errors.New("configuration field is required")
+	}
+
+	// Generiši ID-jeve ako nedostaju
+	if cfg.Id == "" {
+		cfg.Id = uuid.New().String()
+	}
+	if cfg.Configuration.ID == "" {
+		cfg.Configuration.ID = uuid.New().String()
+	}
+
+	// Provera duplikata po NAME + VERSION
 	for _, c := range group.Configurations {
-		if c.Id == cfg.Id {
-			return errors.New("config already exists in group")
+		if c.Configuration.Name == cfg.Configuration.Name &&
+			c.Configuration.Version == cfg.Configuration.Version {
+			return errors.New("configuration already exists in group")
 		}
 	}
 
 	group.Configurations = append(group.Configurations, &cfg)
+
+	log.Printf("Service: added config %+v to group %s %s", cfg, name, version)
+
 	return s.repo.Update(*group)
 }
 

@@ -1,6 +1,3 @@
-version: "3.8"
-
-#consul UI 
 services:
   consul:
     image: consul:1.15
@@ -11,7 +8,25 @@ services:
 
   config-service:
     build: .
+    container_name: config-service
     ports:
       - "8080:8080"
     depends_on:
       - consul
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./metrics:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+
+volumes:
+  prometheus-data:
