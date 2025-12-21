@@ -79,3 +79,15 @@ type IdempotencyRecord struct {
 	// example: {"id":"config-123","name":"DB Config","version":"v1.0.0"}
 	Body string `json:"body"`
 }
+
+// ErrorResponse represents a standard error
+// swagger:model ErrorResponse
+type ErrorResponse struct {
+	// Error message
+	// example: configuration not found
+	Message string `json:"message"`
+}
+
+// NoContentResponse represents an empty response
+// swagger:model NoContentResponse
+type NoContentResponse struct{}

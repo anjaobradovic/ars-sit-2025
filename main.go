@@ -1,3 +1,8 @@
+// Package classification Configuration Service API.
+//
+// This is a sample server for managing configurations.
+//
+// swagger:meta
 package main
 
 import (
@@ -18,12 +23,6 @@ import (
 	"github.com/anjaobradovic/ars-sit-2025/repositories"
 	"github.com/anjaobradovic/ars-sit-2025/services"
 )
-
-// Package classification Configuration Service API.
-//
-// This is a sample server for managing configurations.
-//
-// swagger:meta
 
 func main() {
 	// --- Config repository + service ---
