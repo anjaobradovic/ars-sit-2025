@@ -7,7 +7,8 @@ services:
     command: consul agent -dev -client=0.0.0.0
 
   config-service:
-    build: .
+    #build: .
+    image: anja23/ars-sit-2025:latest
     container_name: config-service
     ports:
       - "8080:8080"
