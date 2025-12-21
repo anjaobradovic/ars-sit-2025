@@ -35,7 +35,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
-    # samo za push, NE za pull request
+    # push
     if: github.event_name == 'push'
 
     steps:

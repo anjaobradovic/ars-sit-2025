@@ -1,353 +1,494 @@
-openapi: 3.0.3
-info:
-  title: Configuration Service API
-  description: API za upravljanje konfiguracijama i grupama konfiguracija
-  version: "1.0.0"
-
-servers:
-  - url: http://localhost:8080
-
-paths:
-  /configs:
-    post:
-      summary: Create a new configuration
-      operationId: createConfig
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Config'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Config'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Conflict
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /configs/{name}/versions/{version}:
-    get:
-      summary: Get configuration by name and version
-      operationId: getConfigByVersion
-      parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-        - in: path
-          name: version
-          schema:
-            type: string
-          required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Config'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    delete:
-      summary: Delete configuration by name and version
-      operationId: deleteConfigByVersion
-      parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-        - in: path
-          name: version
-          schema:
-            type: string
-          required: true
-      responses:
-        '204':
-          description: No Content
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoContentResponse'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /groups:
-    post:
-      summary: Create a new configuration group
-      operationId: createGroup
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConfigurationGroup'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConfigurationGroup'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /groups/{name}/versions/{version}:
-    get:
-      summary: Get configuration group by name and version
-      operationId: getGroup
-      parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-        - in: path
-          name: version
-          schema:
-            type: string
-          required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConfigurationGroup'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    delete:
-      summary: Delete configuration group by name and version
-      operationId: deleteGroup
-      parameters:
-        - in: path
-          name: name
-          schema:
-            type: string
-          required: true
-        - in: path
-          name: version
-          schema:
-            type: string
-          required: true
-      responses:
-        '204':
-          description: No Content
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoContentResponse'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /groups/{name}/versions/{version}/add-config:
-    post:
-      summary: Add a labeled configuration to a group
-      operationId: addConfig
-      parameters:
-        - in: path
-          name: name
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: version
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LabeledConfiguration'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LabeledConfiguration'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /groups/{name}/versions/{version}/remove-config:
-    post:
-      summary: Remove a labeled configuration from a group
-      operationId: removeConfig
-      parameters:
-        - in: path
-          name: name
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: version
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                configId:
-                  type: string
-                  example: labeled-config-789
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoContentResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /groups/{name}/versions/{version}/configs:
-    get:
-      summary: Get configurations by labels
-      operationId: getConfigsByLabels
-      parameters:
-        - in: path
-          name: name
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: version
-          required: true
-          schema:
-            type: string
-        - in: query
-          name: query
-          required: false
-          schema:
-            type: string
-          description: key=value pair for filtering configurations
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LabeledConfiguration'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-components:
-  schemas:
+basePath: /
+consumes:
+    - application/json
+definitions:
     Config:
-      type: object
-      properties:
-        id:
-          type: string
-          example: config-123
-        name:
-          type: string
-          example: Database Configuration
-        version:
-          type: string
-          example: v1.0.0
-        parameters:
-          type: object
-          additionalProperties:
-            type: string
-          example:
-            host: localhost
-            port: "5432"
-
+        description: Config represents a single configuration item
+        properties:
+            id:
+                description: The unique identifier for the configuration
+                example: config-123
+                type: string
+                x-go-name: ID
+            name:
+                description: The name of the configuration
+                example: Database Configuration
+                type: string
+                x-go-name: Name
+            parameters:
+                additionalProperties:
+                    type: string
+                description: Key-value pairs representing configuration parameters
+                example:
+                    host: localhost
+                    port: "5432"
+                type: object
+                x-go-name: Parameters
+            version:
+                description: The version of the configuration
+                example: v1.0.0
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
     ConfigurationGroup:
-      type: object
-      properties:
-        id:
-          type: string
-          example: group-456
-        name:
-          type: string
-          example: Database Configurations
-        version:
-          type: string
-          example: v2.1.0
-        configurations:
-          type: array
-          items:
-            $ref: '#/components/schemas/LabeledConfiguration'
-
-    LabeledConfiguration:
-      type: object
-      properties:
-        id:
-          type: string
-          example: labeled-config-789
-        configuration:
-          $ref: '#/components/schemas/Config'
-        labels:
-          type: object
-          additionalProperties:
-            type: string
-          example:
-            environment: production
-            region: us-east-1
-
+        description: ConfigurationGroup represents a group of related configurations
+        properties:
+            configurations:
+                description: Array of labeled configurations in this group
+                items:
+                    $ref: '#/definitions/LabeledConfiguration'
+                type: array
+                x-go-name: Configurations
+            id:
+                description: The unique identifier for the configuration group
+                example: group-456
+                type: string
+                x-go-name: Id
+            name:
+                description: The name of the configuration group
+                example: Database Configurations
+                type: string
+                x-go-name: Name
+            version:
+                description: The version of the configuration group
+                example: v2.1.0
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+    ConfigurationGroupConfigurationDto:
+        description: ConfigurationGroupConfigurationDto represents a configuration reference in a group
+        properties:
+            id:
+                description: The ID of the configuration to include in the group
+                example: config-123
+                type: string
+                x-go-name: Id
+            labels:
+                additionalProperties:
+                    type: string
+                description: Labels to apply to this configuration in the group context
+                example:
+                    environment: production
+                    region: us-east-1
+                type: object
+                x-go-name: Labels
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/dtos
+    ConfigurationGroupDto:
+        description: ConfigurationGroupDto represents the request/response body for configuration groups
+        properties:
+            configuration_list:
+                description: List of configurations to include in this group
+                items:
+                    $ref: '#/definitions/ConfigurationGroupConfigurationDto'
+                minItems: 1
+                type: array
+                x-go-name: ConfigurationList
+            name:
+                description: The name of the configuration group
+                example: backend-group
+                type: string
+                x-go-name: Name
+            version:
+                description: The version of the configuration group
+                example: v1
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/dtos
+    CreateConfigurationDto:
+        description: CreateConfigurationDto represents the request body for creating a new configuration
+        properties:
+            name:
+                description: The name of the configuration
+                example: database-config
+                type: string
+                x-go-name: Name
+            parameters:
+                additionalProperties:
+                    type: string
+                description: Key-value pairs representing configuration parameters
+                example:
+                    db.host: localhost
+                    db.port: "5432"
+                type: object
+                x-go-name: Parameters
+            version:
+                description: The version of the configuration
+                example: v1.0
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/dtos
     ErrorResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          example: configuration not found
-
+        description: ErrorResponse represents a standard error
+        properties:
+            message:
+                description: Error message
+                example: configuration not found
+                type: string
+                x-go-name: Message
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+    IdempotencyRecord:
+        description: IdempotencyRecord stores information about an idempotent request
+        properties:
+            body:
+                description: Body of the response
+                example: '{"id":"config-123","name":"DB Config","version":"v1.0.0"}'
+                type: string
+                x-go-name: Body
+            status:
+                $ref: '#/definitions/IdempotencyStatus'
+            statusCode:
+                description: HTTP status code returned for the request
+                example: 200
+                format: int64
+                type: integer
+                x-go-name: StatusCode
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+    IdempotencyStatus:
+        description: IdempotencyStatus represents the status of an idempotent operation
+        type: string
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+    LabeledConfiguration:
+        description: LabeledConfiguration represents a configuration with associated labels
+        properties:
+            configuration:
+                $ref: '#/definitions/Config'
+            id:
+                description: The unique identifier for the labeled configuration
+                example: labeled-config-789
+                type: string
+                x-go-name: Id
+            labels:
+                additionalProperties:
+                    type: string
+                description: Key-value pairs representing labels for this configuration
+                example:
+                    environment: production
+                    region: us-east-1
+                type: object
+                x-go-name: Labels
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
     NoContentResponse:
-      type: object
+        description: NoContentResponse represents an empty response
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+info:
+    description: Documentation of our Configuration Service API.
+    title: Configuration Service API.
+    version: 1.0.0
+paths:
+    /configs:
+        post:
+            consumes:
+                - application/json
+            description: This endpoint creates a new configuration with the provided data.
+            operationId: createConfiguration
+            parameters:
+                - in: body
+                  name: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/Config'
+                  x-go-name: Body
+            produces:
+                - application/json
+            responses:
+                "201":
+                    description: Config
+                    schema:
+                        $ref: '#/definitions/Config'
+                "400":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+                "409":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+                "500":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+            summary: Create a new configuration.
+            tags:
+                - configurations
+    /configs/{name}/versions/{version}:
+        delete:
+            description: This endpoint deletes a specific configuration by its name and version.
+            operationId: deleteConfigurationByNameAndVersion
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - in: path
+                  name: version
+                  required: true
+                  type: string
+                  x-go-name: Version
+            responses:
+                "204":
+                    description: NoContentResponse
+                    schema:
+                        $ref: '#/definitions/NoContentResponse'
+                "404":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+                "500":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+            summary: Delete configuration by name and version.
+            tags:
+                - configurations
+        get:
+            description: This endpoint retrieves a specific configuration by its name and version.
+            operationId: getConfigurationByNameAndVersion
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - in: path
+                  name: version
+                  required: true
+                  type: string
+                  x-go-name: Version
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: Config
+                    schema:
+                        $ref: '#/definitions/Config'
+                "404":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+                "500":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+            summary: Get configuration by name and version.
+            tags:
+                - configurations
+    /groups:
+        post:
+            consumes:
+                - application/json
+            operationId: createGroup
+            parameters:
+                - in: body
+                  name: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/ConfigurationGroup'
+                  x-go-name: Body
+            produces:
+                - application/json
+            responses:
+                "201":
+                    description: ConfigurationGroup
+                    schema:
+                        $ref: '#/definitions/ConfigurationGroup'
+                "400":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+            summary: Create a new configuration group.
+            tags:
+                - groups
+    /groups/{name}/versions/{version}:
+        delete:
+            description: This endpoint deletes a configuration group by name and version.
+            operationId: deleteGroup
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - in: path
+                  name: version
+                  required: true
+                  type: string
+                  x-go-name: Version
+            responses:
+                "204":
+                    description: NoContentResponse
+                    schema:
+                        $ref: '#/definitions/NoContentResponse'
+                "404":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+            summary: Delete a configuration group.
+            tags:
+                - groups
+        get:
+            description: This endpoint retrieves a specific configuration group by name and version.
+            operationId: getGroup
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - in: path
+                  name: version
+                  required: true
+                  type: string
+                  x-go-name: Version
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: ConfigurationGroup
+                    schema:
+                        $ref: '#/definitions/ConfigurationGroup'
+                "404":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+            summary: Get a configuration group.
+            tags:
+                - groups
+    /groups/{name}/versions/{version}/add-config:
+        post:
+            consumes:
+                - application/json
+            description: This endpoint adds a labeled configuration to an existing group.
+            operationId: addConfig
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - in: path
+                  name: version
+                  required: true
+                  type: string
+                  x-go-name: Version
+                - in: body
+                  name: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/LabeledConfiguration'
+                  x-go-name: Body
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: LabeledConfiguration
+                    schema:
+                        $ref: '#/definitions/LabeledConfiguration'
+                "400":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+            summary: Add configuration to group.
+            tags:
+                - groups
+    /groups/{name}/versions/{version}/configs:
+        get:
+            description: |-
+                This endpoint retrieves all configurations in a group that match the provided labels.
+                All labels from the query must match (AND).
+            operationId: getConfigsByLabels
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - in: path
+                  name: version
+                  required: true
+                  type: string
+                  x-go-name: Version
+                - description: Labels filter in format key:value;key2:value2 (all must match). For example env:prod;region:eu
+                  in: query
+                  name: labels
+                  type: string
+                  x-go-name: Labels
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/labeledConfigurationsResponse'
+                "400":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+                "404":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+            summary: Get configurations by labels.
+            tags:
+                - groups
+    /groups/{name}/versions/{version}/remove-config:
+        post:
+            consumes:
+                - application/json
+            description: This endpoint removes a labeled configuration from a group by labeled configuration ID.
+            operationId: removeConfig
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - in: path
+                  name: version
+                  required: true
+                  type: string
+                  x-go-name: Version
+                - in: body
+                  name: body
+                  required: true
+                  schema:
+                    properties:
+                        configId:
+                            description: ID of labeled configuration to remove
+                            type: string
+                            x-go-name: ConfigID
+                    type: object
+                  x-go-name: Body
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: NoContentResponse
+                    schema:
+                        $ref: '#/definitions/NoContentResponse'
+                "400":
+                    description: ErrorResponse
+                    schema:
+                        $ref: '#/definitions/ErrorResponse'
+            summary: Remove configuration from group.
+            tags:
+                - groups
+produces:
+    - application/json
+responses:
+    labeledConfigurationsResponse:
+        description: Labeled configurations response
+        schema:
+            items:
+                $ref: '#/definitions/LabeledConfiguration'
+            type: array
+schemes:
+    - http
+swagger: "2.0"

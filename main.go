@@ -1,6 +1,17 @@
 // Package classification Configuration Service API.
 //
-// This is a sample server for managing configurations.
+// Documentation of our Configuration Service API.
+//
+// Schemes: http
+// BasePath: /
+// Version: 1.0.0
+// Title: Configuration Service API
+//
+// Consumes:
+// - application/json
+//
+// Produces:
+// - application/json
 //
 // swagger:meta
 package main
