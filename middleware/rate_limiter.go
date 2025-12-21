@@ -1,38 +1,89 @@
 package middleware
 
 import (
-	"log"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
-var (
-	mu       sync.Mutex
-	lastSeen = map[string]time.Time{}
-)
+type client struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
 
-func RateLimit(next http.Handler) http.Handler {
-	log.Println("RATE LIMIT MIDDLEWARE HIT")
+type RateLimiter struct {
+	mu      sync.Mutex
+	clients map[string]*client
+	rate    rate.Limit
+	burst   int
+	ttl     time.Duration
+}
 
+func NewRateLimiter(r rate.Limit, burst int, ttl time.Duration) *RateLimiter {
+	rl := &RateLimiter{
+		clients: make(map[string]*client),
+		rate:    r,
+		burst:   burst,
+		ttl:     ttl,
+	}
+
+	// cleanup gorutina da mapa ne raste beskonačno
+	go func() {
+		ticker := time.NewTicker(ttl)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			rl.cleanup()
+		}
+	}()
+
+	return rl
+}
+
+func (rl *RateLimiter) getClient(ip string) *rate.Limiter {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	if c, ok := rl.clients[ip]; ok {
+		c.lastSeen = time.Now()
+		return c.limiter
+	}
+
+	lim := rate.NewLimiter(rl.rate, rl.burst)
+	rl.clients[ip] = &client{limiter: lim, lastSeen: time.Now()}
+	return lim
+}
+
+func (rl *RateLimiter) cleanup() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+	for ip, c := range rl.clients {
+		if now.Sub(c.lastSeen) > rl.ttl {
+			delete(rl.clients, ip)
+		}
+	}
+}
+
+// Middleware
+func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := r.RemoteAddr
 		if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 			ip = host
 		}
 
-		now := time.Now()
+		limiter := rl.getClient(ip)
 
-		mu.Lock()
-		last, ok := lastSeen[ip]
-		if ok && now.Sub(last) < 2*time.Second {
-			mu.Unlock()
-			http.Error(w, "rate limit: 1 request every 2sec", http.StatusTooManyRequests)
+		// Allow = token bucket: steady rate + burst
+		if !limiter.Allow() {
+			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}
-		lastSeen[ip] = now
-		mu.Unlock()
 
 		next.ServeHTTP(w, r)
 	})
