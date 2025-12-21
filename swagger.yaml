@@ -1,237 +1,101 @@
-swagger: "2.0"
-
-info:
-  title: Configuration Service API
-  description: API for managing configurations and configuration groups with versioning and labels
-  version: "1.0.0"
-
-host: localhost:8080
-basePath: /
-schemes:
-  - http
-
-consumes:
-  - application/json
-produces:
-  - application/json
-
-paths:
-
-  /configs:
-    post:
-      summary: Create a new configuration
-      description: Creates a new configuration with versioning support
-      parameters:
-        - name: config
-          in: body
-          required: true
-          schema:
-            $ref: "#/definitions/Config"
-      responses:
-        201:
-          description: Configuration created
-          schema:
-            $ref: "#/definitions/Config"
-
-  /configs/{id}/versions/{version}:
-    get:
-      summary: Get configuration by ID and version
-      parameters:
-        - name: id
-          in: path
-          required: true
-          type: string
-        - name: version
-          in: path
-          required: true
-          type: string
-      responses:
-        200:
-          description: Configuration found
-          schema:
-            $ref: "#/definitions/Config"
-        404:
-          description: Configuration not found
-
-    delete:
-      summary: Delete configuration by ID and version
-      parameters:
-        - name: id
-          in: path
-          required: true
-          type: string
-        - name: version
-          in: path
-          required: true
-          type: string
-      responses:
-        204:
-          description: Configuration deleted
-
-  /groups:
-    post:
-      summary: Create a configuration group
-      parameters:
-        - name: group
-          in: body
-          required: true
-          schema:
-            $ref: "#/definitions/ConfigurationGroup"
-      responses:
-        201:
-          description: Group created
-          schema:
-            $ref: "#/definitions/ConfigurationGroup"
-
-  /groups/{name}/versions/{version}:
-    get:
-      summary: Get configuration group by name and version
-      parameters:
-        - name: name
-          in: path
-          required: true
-          type: string
-        - name: version
-          in: path
-          required: true
-          type: string
-      responses:
-        200:
-          description: Group found
-          schema:
-            $ref: "#/definitions/ConfigurationGroup"
-        404:
-          description: Group not found
-
-    delete:
-      summary: Delete configuration group
-      parameters:
-        - name: name
-          in: path
-          required: true
-          type: string
-        - name: version
-          in: path
-          required: true
-          type: string
-      responses:
-        204:
-          description: Group deleted
-
-  /groups/{name}/versions/{version}/add-config:
-    post:
-      summary: Add configuration to group with labels
-      parameters:
-        - name: name
-          in: path
-          required: true
-          type: string
-        - name: version
-          in: path
-          required: true
-          type: string
-        - name: labeledConfig
-          in: body
-          required: true
-          schema:
-            $ref: "#/definitions/LabeledConfiguration"
-      responses:
-        200:
-          description: Configuration added to group
-
-  /groups/{name}/versions/{version}/remove-config:
-    post:
-      summary: Remove configuration from group
-      parameters:
-        - name: name
-          in: path
-          required: true
-          type: string
-        - name: version
-          in: path
-          required: true
-          type: string
-        - name: removeRequest
-          in: body
-          required: true
-          schema:
-            $ref: "#/definitions/RemoveConfigRequest"
-      responses:
-        200:
-          description: Configuration removed from group
-
-  /groups/{name}/versions/{version}/configs:
-    get:
-      summary: Get configurations from group filtered by labels
-      parameters:
-        - name: name
-          in: path
-          required: true
-          type: string
-        - name: version
-          in: path
-          required: true
-          type: string
-        - name: env
-          in: query
-          required: false
-          type: string
-        - name: region
-          in: query
-          required: false
-          type: string
-      responses:
-        200:
-          description: Filtered configurations
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/LabeledConfiguration"
-
 definitions:
-
-  Config:
-    type: object
-    properties:
-      id:
-        type: string
-      name:
-        type: string
-      version:
-        type: string
-      parameters:
+    Config:
+        description: Config represents a single configuration item
+        properties:
+            id:
+                description: The unique identifier for the configuration
+                example: config-123
+                type: string
+                x-go-name: ID
+            name:
+                description: The name of the configuration
+                example: Database Configuration
+                type: string
+                x-go-name: Name
+            parameters:
+                additionalProperties:
+                    type: string
+                description: Key-value pairs representing configuration parameters
+                example:
+                    host: localhost
+                    port: "5432"
+                type: object
+                x-go-name: Parameters
+            version:
+                description: The version of the configuration
+                example: v1.0.0
+                type: string
+                x-go-name: Version
         type: object
-        additionalProperties:
-          type: string
-
-  LabeledConfiguration:
-    type: object
-    properties:
-      id:
-        type: string
-      configuration:
-        $ref: "#/definitions/Config"
-      labels:
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+    ConfigurationGroup:
+        description: ConfigurationGroup represents a group of related configurations
+        properties:
+            configurations:
+                description: Array of labeled configurations in this group
+                items:
+                    $ref: '#/definitions/LabeledConfiguration'
+                type: array
+                x-go-name: Configurations
+            id:
+                description: The unique identifier for the configuration group
+                example: group-456
+                type: string
+                x-go-name: Id
+            name:
+                description: The name of the configuration group
+                example: Database Configurations
+                type: string
+                x-go-name: Name
+            version:
+                description: The version of the configuration group
+                example: v2.1.0
+                type: string
+                x-go-name: Version
         type: object
-        additionalProperties:
-          type: string
-
-  ConfigurationGroup:
-    type: object
-    properties:
-      id:
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+    IdempotencyRecord:
+        description: IdempotencyRecord stores information about an idempotent request
+        properties:
+            body:
+                description: Body of the response
+                example: '{"id":"config-123","name":"DB Config","version":"v1.0.0"}'
+                type: string
+                x-go-name: Body
+            status:
+                $ref: '#/definitions/IdempotencyStatus'
+            statusCode:
+                description: HTTP status code returned for the request
+                example: 200
+                format: int64
+                type: integer
+                x-go-name: StatusCode
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+    IdempotencyStatus:
+        description: IdempotencyStatus represents the status of an idempotent operation
         type: string
-      name:
-        type: string
-      version:
-        type: string
-      configurations:
-        type: array
-        items:
-          $ref: "#/definitions/LabeledConfiguration"
-
-  RemoveConfigRequest:
-    type: object
-    properties:
-      configId:
-        type: string
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+    LabeledConfiguration:
+        description: LabeledConfiguration represents a configuration with associated labels
+        properties:
+            configuration:
+                $ref: '#/definitions/Config'
+            id:
+                description: The unique identifier for the labeled configuration
+                example: labeled-config-789
+                type: string
+                x-go-name: Id
+            labels:
+                additionalProperties:
+                    type: string
+                description: Key-value pairs representing labels for this configuration
+                example:
+                    environment: production
+                    region: us-east-1
+                type: object
+                x-go-name: Labels
+        type: object
+        x-go-package: github.com/anjaobradovic/ars-sit-2025/model
+paths: {}
+swagger: "2.0"

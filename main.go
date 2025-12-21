@@ -19,6 +19,12 @@ import (
 	"github.com/anjaobradovic/ars-sit-2025/services"
 )
 
+// Package classification Configuration Service API.
+//
+// This is a sample server for managing configurations.
+//
+// swagger:meta
+
 func main() {
 	// --- Config repository + service ---
 	configRepo, err := repositories.NewConfigRepository("consul:8500")
@@ -51,6 +57,12 @@ func main() {
 	//r.Use(middleware.RateLimit)
 
 	r.Handle("/metrics", metrics.MetricsHandler())
+
+	// --- Swagger UI ---
+
+	opts := middleware.SwaggerUIOpts{SpecURL: "/swagger.yaml"}
+	sh := middleware.SwaggerUI(opts, nil)
+	r.Handle("/docs", sh)
 
 	// Config endpoints sa IdempotencyMiddleware
 	r.Handle("/configs", middleware.IdempotencyMiddleware(consulClient)(http.HandlerFunc(configHandler.CreateConfig))).Methods("POST")
