@@ -18,6 +18,31 @@ func NewGroupHandler(service *services.GroupService) *GroupHandler {
 	return &GroupHandler{service: service}
 }
 
+// CreateGroup creates a new configuration group
+// swagger:route POST /groups groups createGroup
+//
+// # Create a new configuration group
+//
+// This endpoint creates a configuration group with the provided data.
+//
+// Consumes:
+// - application/json
+//
+// Produces:
+// - application/json
+//
+// Parameters:
+// - name: group
+//   in: body
+//   description: ConfigurationGroup object to create
+//   required: true
+//   schema:
+//     $ref: '#/definitions/ConfigurationGroup'
+//
+// Responses:
+//   201: body:ConfigurationGroup
+//   400: body:ErrorResponse
+
 func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	var group model.ConfigurationGroup
 	if err := json.NewDecoder(r.Body).Decode(&group); err != nil {
@@ -34,6 +59,29 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(group)
 }
 
+// GetGroup retrieves a configuration group by name and version
+// swagger:route GET /groups/{name}/versions/{version} groups getGroup
+//
+// # Get a configuration group
+//
+// This endpoint retrieves a specific configuration group by name and version.
+//
+// Parameters:
+// - name: name
+//   in: path
+//   required: true
+//   type: string
+//   description: Name of the configuration group
+// - name: version
+//   in: path
+//   required: true
+//   type: string
+//   description: Version of the configuration group
+//
+// Responses:
+//   200: body:ConfigurationGroup
+//   404: body:ErrorResponse
+
 func (h *GroupHandler) GetGroup(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
@@ -46,6 +94,27 @@ func (h *GroupHandler) GetGroup(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(group)
 }
 
+// DeleteGroup deletes a configuration group by name and version
+// swagger:route DELETE /groups/{name}/versions/{version} groups deleteGroup
+//
+// # Delete a configuration group
+//
+// This endpoint deletes a configuration group by name and version.
+//
+// Parameters:
+// - name: name
+//   in: path
+//   required: true
+//   type: string
+// - name: version
+//   in: path
+//   required: true
+//   type: string
+//
+// Responses:
+//   204: body:NoContentResponse
+//   404: body:ErrorResponse
+
 func (h *GroupHandler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
@@ -57,6 +126,36 @@ func (h *GroupHandler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// AddConfig adds a configuration to a group
+// swagger:route POST /groups/{name}/versions/{version}/add-config groups addConfig
+//
+// # Add configuration to group
+//
+// This endpoint adds a labeled configuration to an existing group.
+//
+// Consumes:
+// - application/json
+//
+// Parameters:
+//   - name: name
+//     in: path
+//     required: true
+//     type: string
+//   - name: version
+//     in: path
+//     required: true
+//     type: string
+//   - name: config
+//     in: body
+//     required: true
+//     description: LabeledConfiguration to add
+//     schema:
+//     $ref: '#/definitions/LabeledConfiguration'
+//
+// Responses:
+//
+//	200: body:LabeledConfiguration
+//	400: body:ErrorResponse
 func (h *GroupHandler) AddConfig(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	var cfg model.LabeledConfiguration
@@ -78,6 +177,39 @@ func (h *GroupHandler) AddConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// RemoveConfig removes a configuration from a group
+// swagger:route POST /groups/{name}/versions/{version}/remove-config groups removeConfig
+//
+// # Remove configuration from group
+//
+// This endpoint removes a labeled configuration from a group.
+//
+// Consumes:
+// - application/json
+//
+// Parameters:
+// - name: name
+//   in: path
+//   required: true
+//   type: string
+// - name: version
+//   in: path
+//   required: true
+//   type: string
+// - name: configId
+//   in: body
+//   required: true
+//   description: ID of the configuration to remove
+//   schema:
+//     type: object
+//     properties:
+//       configId:
+//         type: string
+//
+// Responses:
+//   200: body:NoContentResponse
+//   400: body:ErrorResponse
+
 func (h *GroupHandler) RemoveConfig(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
@@ -98,6 +230,32 @@ func (h *GroupHandler) RemoveConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// GetConfigsByLabels gets configurations from a group filtered by labels
+// swagger:route GET /groups/{name}/versions/{version}/configs groups getConfigsByLabels
+//
+// # Get configurations by labels
+//
+// This endpoint retrieves all configurations in a group that match the provided labels.
+//
+// Parameters:
+//   - name: name
+//     in: path
+//     required: true
+//     type: string
+//   - name: version
+//     in: path
+//     required: true
+//     type: string
+//   - name: query
+//     in: query
+//     required: false
+//     type: string
+//     description: Labels to filter configurations (key=value)
+//
+// Responses:
+//
+//	200: body:[LabeledConfiguration]
+//	404: body:ErrorResponse
 func (h *GroupHandler) GetConfigsByLabels(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
