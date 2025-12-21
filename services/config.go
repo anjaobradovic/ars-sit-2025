@@ -1,13 +1,19 @@
 package services
 
 import (
+	"context"
 	"errors"
-	"log"
 
 	"github.com/anjaobradovic/ars-sit-2025/model"
 	"github.com/anjaobradovic/ars-sit-2025/repositories"
 	"github.com/google/uuid"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
+
+var tracer = otel.Tracer("services/config")
 
 type ConfigService struct {
 	repo *repositories.ConfigRepository
@@ -17,32 +23,66 @@ func NewConfigService(repo *repositories.ConfigRepository) *ConfigService {
 	return &ConfigService{repo: repo}
 }
 
-func (s *ConfigService) Create(config *model.Config) error {
-	log.Printf("Before UUID: %+v\n", config) // <--- dodaj ovo
-	if config.ID == "" {
-		config.ID = uuid.New().String()
+func (s *ConfigService) Create(ctx context.Context, config *model.Config) error {
+	ctx, span := tracer.Start(ctx, "ConfigService.Create")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("config.name", config.Name),
+		attribute.String("config.version", config.Version),
+	)
+
+	if config.Name == "" || config.Version == "" {
+		err := errors.New("name and version are required")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "validation failed")
+		return err
 	}
-	log.Printf("After UUID: %+v\n", config) // <--- i ovo
-	if config.Name == "" {
-		return errors.New("name is required")
+
+	config.ID = uuid.NewString()
+
+	if err := s.repo.Save(ctx, *config); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "repo save failed")
+		return err
 	}
-	if config.Version == "" {
-		return errors.New("version is required")
-	}
-	return s.repo.Save(*config)
+
+	return nil
 }
 
-func (s *ConfigService) Get(name, version string) (*model.Config, error) {
-	if name == "" || version == "" {
-		return nil, errors.New("name and version are required")
+func (s *ConfigService) Get(ctx context.Context, name, version string) (*model.Config, error) {
+	ctx, span := tracer.Start(ctx, "ConfigService.Get")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("config.name", name),
+		attribute.String("config.version", version),
+	)
+
+	cfg, err := s.repo.GetByNameAndVersion(ctx, name, version)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "repo get failed")
+		return nil, err
 	}
-	return s.repo.GetByNameAndVersion(name, version)
+
+	return cfg, nil
 }
 
-// Delete by ID + version
-func (s *ConfigService) Delete(name, version string) error {
-	if name == "" || version == "" {
-		return errors.New("name and version are required")
+func (s *ConfigService) Delete(ctx context.Context, name, version string) error {
+	ctx, span := tracer.Start(ctx, "ConfigService.Delete")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("config.name", name),
+		attribute.String("config.version", version),
+	)
+
+	if err := s.repo.DeleteByNameAndVersion(ctx, name, version); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "repo delete failed")
+		return err
 	}
-	return s.repo.DeleteByNameAndVersion(name, version)
+
+	return nil
 }

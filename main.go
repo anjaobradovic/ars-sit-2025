@@ -22,53 +22,68 @@ import (
 	"github.com/anjaobradovic/ars-sit-2025/middleware"
 	"github.com/anjaobradovic/ars-sit-2025/repositories"
 	"github.com/anjaobradovic/ars-sit-2025/services"
+	"github.com/anjaobradovic/ars-sit-2025/tracing"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 )
 
 func main() {
-	// --- Config repository + service ---
-	configRepo, err := repositories.NewConfigRepository("consul:8500")
+	// ---- Tracing init ----
+	rootCtx := context.Background()
+
+	shutdownTracer, err := tracing.InitTracer(rootCtx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = shutdownTracer(rootCtx) }()
+
+	// ---- Consul / repos / services / handlers ----
+	// Izaberi JEDNU adresu u zavisnosti kako pokrećeš.
+	consulAddr := "consul:8500" // docker-compose varijanta
+
+	configRepo, err := repositories.NewConfigRepository(consulAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
 	configService := services.NewConfigService(configRepo)
 	configHandler := handlers.NewConfigHandler(configService)
 
-	// --- Configuration Groups ---
-	groupRepo, err := repositories.NewGroupRepository("consul:8500")
+	groupRepo, err := repositories.NewGroupRepository(consulAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
 	groupService := services.NewGroupService(groupRepo)
 	groupHandler := handlers.NewGroupHandler(groupService)
 
-	config := api.DefaultConfig()
-	config.Address = "host.docker.internal:8500"
-	consulClient, err := api.NewClient(config)
+	cfg := api.DefaultConfig()
+	cfg.Address = consulAddr
+	consulClient, err := api.NewClient(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// --- Router ---
+	// ---- Router
 	r := mux.NewRouter()
 
-	// --- Middleware ---
+	// Middleware
 	r.Use(middleware.MetricsMiddleware)
-	//r.Use(middleware.RateLimit)
+	r.Use(otelmux.Middleware(
+		"config-service",
+		otelmux.WithFilter(func(r *http.Request) bool {
+			return r.URL.Path != "/metrics"
+		}),
+	))
 
+	// Routes
 	r.Handle("/metrics", metrics.MetricsHandler())
-
-	// --- Swagger UI ---
 
 	opts := middleware.SwaggerUIOpts{SpecURL: "/swagger.yaml"}
 	sh := middleware.SwaggerUI(opts, nil)
 	r.Handle("/docs", sh)
 
-	// Config endpoints sa IdempotencyMiddleware
 	r.Handle("/configs", middleware.IdempotencyMiddleware(consulClient)(http.HandlerFunc(configHandler.CreateConfig))).Methods("POST")
 	r.HandleFunc("/configs/{name}/versions/{version}", configHandler.GetConfigByVersion).Methods("GET")
 	r.HandleFunc("/configs/{name}/versions/{version}", configHandler.DeleteConfigByVersion).Methods("DELETE")
 
-	// Configuration Groups endpoints
 	r.HandleFunc("/groups", groupHandler.CreateGroup).Methods("POST")
 	r.HandleFunc("/groups/{name}/versions/{version}", groupHandler.GetGroup).Methods("GET")
 	r.HandleFunc("/groups/{name}/versions/{version}", groupHandler.DeleteGroup).Methods("DELETE")
@@ -76,7 +91,7 @@ func main() {
 	r.HandleFunc("/groups/{name}/versions/{version}/remove-config", groupHandler.RemoveConfig).Methods("POST")
 	r.HandleFunc("/groups/{name}/versions/{version}/configs", groupHandler.GetConfigsByLabels).Methods("GET")
 
-	// --- HTTP server ---
+	// ---- Server
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: r,
@@ -94,13 +109,14 @@ func main() {
 		}
 	}()
 
-	// Wait for shutdown signal
+	// Wait for shutdown
 	<-quit
 	log.Println("Shutting down Config service...")
 
 	// Graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("Server forced to shutdown:", err)
 	}

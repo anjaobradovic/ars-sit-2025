@@ -10,14 +10,15 @@ services:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
     environment:
-      - COLLECTOR_OTLP_ENABLED=true
+     - COLLECTOR_OTLP_ENABLED=true
     ports:
       - "16686:16686"
       - "4317:4317"
       - "4318:4318"
 
   config-service:
-    image: anja23/ars-sit-2025:main   # ili develop, ili tag sa SHA
+    build: .
+    #image: anja23/ars-sit-2025:latest
     container_name: config-service
     ports:
       - "8080:8080"

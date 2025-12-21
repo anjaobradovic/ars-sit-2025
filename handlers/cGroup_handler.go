@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/anjaobradovic/ars-sit-2025/model"
 	"github.com/anjaobradovic/ars-sit-2025/services"
@@ -246,11 +247,11 @@ func (h *GroupHandler) RemoveConfig(w http.ResponseWriter, r *http.Request) {
 //     in: path
 //     required: true
 //     type: string
-//   - name: query
+//   - name: labels
 //     in: query
 //     required: false
 //     type: string
-//     description: Labels to filter configurations (key=value)
+//     description: Labels filter in format key:value;key2:value2 (all must match)
 //
 // Responses:
 //
@@ -265,13 +266,47 @@ func (h *GroupHandler) GetConfigsByLabels(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	queryLabels := r.URL.Query()
+	// Očekujemo: ?labels=env:prod;region:eu
+	raw := strings.TrimSpace(r.URL.Query().Get("labels"))
+
+	// Ako nema labels parametra, vrati sve konfiguracije u grupi
+	if raw == "" {
+		_ = json.NewEncoder(w).Encode(group.Configurations)
+		return
+	}
+
+	// Parsiranje: key:value;key2:value2
+	queryLabels := map[string]string{}
+	pairs := strings.Split(raw, ";")
+	for _, p := range pairs {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+
+		kv := strings.SplitN(p, ":", 2)
+		if len(kv) != 2 {
+			http.Error(w, "invalid labels format, expected key:value;key2:value2", http.StatusBadRequest)
+			return
+		}
+
+		k := strings.TrimSpace(kv[0])
+		v := strings.TrimSpace(kv[1])
+		if k == "" || v == "" {
+			http.Error(w, "invalid labels format, empty key or value", http.StatusBadRequest)
+			return
+		}
+
+		queryLabels[k] = v
+	}
+
 	result := []*model.LabeledConfiguration{}
 
+	// AND matching: sve labele iz upita moraju postojati u cfg.Labels i biti jednake
 	for _, cfg := range group.Configurations {
 		match := true
-		for key, values := range queryLabels {
-			if cfg.Labels == nil || cfg.Labels[key] != values[0] {
+		for k, v := range queryLabels {
+			if cfg.Labels == nil || cfg.Labels[k] != v {
 				match = false
 				break
 			}
@@ -281,5 +316,5 @@ func (h *GroupHandler) GetConfigsByLabels(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	json.NewEncoder(w).Encode(result)
+	_ = json.NewEncoder(w).Encode(result)
 }
