@@ -1,19 +1,3 @@
-// Package classification Configuration Service API.
-//
-// Documentation of our Configuration Service API.
-//
-// Schemes: http
-// BasePath: /
-// Version: 1.0.0
-// Title: Configuration Service API
-//
-// Consumes:
-// - application/json
-//
-// Produces:
-// - application/json
-//
-// swagger:meta
 package main
 
 import (
@@ -38,18 +22,14 @@ import (
 )
 
 func main() {
-	// ---- Tracing init ----
 	rootCtx := context.Background()
 
 	shutdownTracer, err := tracing.InitTracer(rootCtx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() { _ = shutdownTracer(rootCtx) }()
 
-	// ---- Consul / repos / services / handlers ----
-	// Izaberi JEDNU adresu u zavisnosti kako pokrećeš.
-	consulAddr := "consul:8500" // docker-compose varijanta
+	consulAddr := "consul:8500"
 
 	configRepo, err := repositories.NewConfigRepository(consulAddr)
 	if err != nil {
@@ -72,15 +52,30 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// ---- Router
 	r := mux.NewRouter()
 
-	// Middleware
+	// Metrics
 	r.Use(middleware.MetricsMiddleware)
+
+	// Rate limiter (skip metrics/docs/spec)
+	rl := middleware.NewRateLimiter(10, 20, 2*time.Minute)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			switch req.URL.Path {
+			case "/metrics", "/docs", "/swagger.yaml":
+				next.ServeHTTP(w, req)
+				return
+			default:
+				rl.Middleware(next).ServeHTTP(w, req)
+			}
+		})
+	})
+
+	// Tracing (skip metrics)
 	r.Use(otelmux.Middleware(
 		"config-service",
-		otelmux.WithFilter(func(r *http.Request) bool {
-			return r.URL.Path != "/metrics"
+		otelmux.WithFilter(func(req *http.Request) bool {
+			return req.URL.Path != "/metrics"
 		}),
 	))
 
@@ -102,17 +97,14 @@ func main() {
 	r.HandleFunc("/groups/{name}/versions/{version}/remove-config", groupHandler.RemoveConfig).Methods("POST")
 	r.HandleFunc("/groups/{name}/versions/{version}/configs", groupHandler.GetConfigsByLabels).Methods("GET")
 
-	// ---- Server
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: r,
 	}
 
-	// OS signal channel
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
-	// Start server
 	go func() {
 		log.Println("Config service running on :8080")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -120,17 +112,17 @@ func main() {
 		}
 	}()
 
-	// Wait for shutdown
 	<-quit
 	log.Println("Shutting down Config service...")
 
-	// Graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("Server forced to shutdown:", err)
 	}
+
+	_ = shutdownTracer(ctx)
 
 	log.Println("Server stopped gracefully")
 }
