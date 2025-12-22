@@ -10,6 +10,11 @@ RUN go mod download
 #preuzima sve zavisnosti naseg servisa
 COPY ./ ./
 
+COPY swagger.yaml /app/swagger.yaml
+COPY swagger /app/swagger
+
+
+
 RUN go build -o app
 
 EXPOSE 8080

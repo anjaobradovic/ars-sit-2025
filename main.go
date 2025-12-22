@@ -54,20 +54,28 @@ func main() {
 
 	r := mux.NewRouter()
 
-	// Metrics
+	// Health
+	r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}).Methods("GET")
+
+	// Metrics middleware
 	r.Use(middleware.MetricsMiddleware)
 
-	// Rate limiter (skip metrics/docs/spec)
+	// Rate limiter (SKIP: metrics + swagger ui + swagger spec)
 	rl := middleware.NewRateLimiter(10, 20, 2*time.Minute)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			switch req.URL.Path {
-			case "/metrics", "/docs", "/swagger.yaml":
+			p := req.URL.Path
+
+			// bitno: /docs/ i sve ispod mora da se preskoči (css/js)
+			if p == "/metrics" || p == "/swagger.yaml" || p == "/docs" || len(p) >= 6 && p[:6] == "/docs/" {
 				next.ServeHTTP(w, req)
 				return
-			default:
-				rl.Middleware(next).ServeHTTP(w, req)
 			}
+
+			rl.Middleware(next).ServeHTTP(w, req)
 		})
 	})
 
@@ -79,17 +87,37 @@ func main() {
 		}),
 	))
 
-	// Routes
-	r.Handle("/metrics", metrics.MetricsHandler())
+	// ---- Routes ----
 
-	opts := middleware.SwaggerUIOpts{SpecURL: "/swagger.yaml"}
-	sh := middleware.SwaggerUI(opts, nil)
-	r.Handle("/docs", sh)
+	// Prometheus metrics endpoint
+	r.Handle("/metrics", metrics.MetricsHandler()).Methods("GET")
 
-	r.Handle("/configs", middleware.IdempotencyMiddleware(consulClient)(http.HandlerFunc(configHandler.CreateConfig))).Methods("POST")
+	// Serve swagger spec
+	r.HandleFunc("/swagger.yaml", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/x-yaml")
+		http.ServeFile(w, req, "./swagger.yaml")
+	}).Methods("GET")
+
+	// Swagger UI
+	// /docs -> /docs/
+	r.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
+	}).Methods("GET")
+
+	// /docs/* -> serve ./swagger/*
+	// (tvoj SwaggerUI() je FileServer("./swagger"), zato StripPrefix)
+	r.PathPrefix("/docs/").
+		Handler(http.StripPrefix("/docs/", middleware.SwaggerUI(middleware.SwaggerUIOpts{}, nil))).
+		Methods("GET")
+
+	// Config routes
+	r.Handle("/configs",
+		middleware.IdempotencyMiddleware(consulClient)(http.HandlerFunc(configHandler.CreateConfig)),
+	).Methods("POST")
 	r.HandleFunc("/configs/{name}/versions/{version}", configHandler.GetConfigByVersion).Methods("GET")
 	r.HandleFunc("/configs/{name}/versions/{version}", configHandler.DeleteConfigByVersion).Methods("DELETE")
 
+	// Group routes
 	r.HandleFunc("/groups", groupHandler.CreateGroup).Methods("POST")
 	r.HandleFunc("/groups/{name}/versions/{version}", groupHandler.GetGroup).Methods("GET")
 	r.HandleFunc("/groups/{name}/versions/{version}", groupHandler.DeleteGroup).Methods("DELETE")
@@ -98,6 +126,7 @@ func main() {
 	r.HandleFunc("/groups/{name}/versions/{version}/configs", groupHandler.GetConfigsByLabels).Methods("GET")
 	r.HandleFunc("/groups/{name}/versions/{version}/configs", groupHandler.DeleteConfigsByLabels).Methods("DELETE")
 
+	// ---- Server + graceful shutdown ----
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: r,
@@ -124,6 +153,5 @@ func main() {
 	}
 
 	_ = shutdownTracer(ctx)
-
 	log.Println("Server stopped gracefully")
 }
