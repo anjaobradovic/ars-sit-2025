@@ -252,3 +252,38 @@ func (h *GroupHandler) GetConfigsByLabels(w http.ResponseWriter, r *http.Request
 
 	_ = json.NewEncoder(w).Encode(result)
 }
+
+// DeleteConfigsByLabels deletes configurations from a group filtered by labels
+// swagger:route DELETE /groups/{name}/versions/{version}/configs groups deleteConfigsByLabels
+//
+// Delete configurations by labels.
+//
+// This endpoint deletes all configurations in a group that match the provided labels.
+// All labels from the query must match (AND).
+//
+// Produces:
+// - application/json
+//
+// Responses:
+//
+//	204: body:NoContentResponse
+//	400: body:ErrorResponse
+//	404: body:ErrorResponse
+func (h *GroupHandler) DeleteConfigsByLabels(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	raw := strings.TrimSpace(r.URL.Query().Get("labels"))
+
+	deleted, err := h.service.DeleteConfigsByLabels(vars["name"], vars["version"], raw)
+	if err != nil {
+		// Ako nema grupe -> 404; ostalo 400
+		if strings.Contains(err.Error(), "group not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Handler: DeleteConfigsByLabels deleted=%d", deleted)
+	w.WriteHeader(http.StatusNoContent)
+}

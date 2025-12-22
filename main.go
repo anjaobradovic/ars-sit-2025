@@ -96,6 +96,7 @@ func main() {
 	r.HandleFunc("/groups/{name}/versions/{version}/add-config", groupHandler.AddConfig).Methods("POST")
 	r.HandleFunc("/groups/{name}/versions/{version}/remove-config", groupHandler.RemoveConfig).Methods("POST")
 	r.HandleFunc("/groups/{name}/versions/{version}/configs", groupHandler.GetConfigsByLabels).Methods("GET")
+	r.HandleFunc("/groups/{name}/versions/{version}/configs", groupHandler.DeleteConfigsByLabels).Methods("DELETE")
 
 	srv := &http.Server{
 		Addr:    ":8080",
